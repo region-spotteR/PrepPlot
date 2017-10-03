@@ -3,7 +3,7 @@ A loose collection of functions to prepare plots in R
 
 I mainly created this package for documenting my work on radar-/spider-plots. However I will add more functions which I used to create certain data-objects for plotting. There is also a folder with examples. 
 
-Concerning radar-plots there is currently three examples I came up. 
+Concerning radar-plots there are currently three examples (cf. the corresponding example-folder):
 1.  You can choose between a polygon grid:
 ![polygon grid](https://user-images.githubusercontent.com/32107403/31129307-7468fad8-a854-11e7-8c43-2a8b349c657e.jpeg)
 
