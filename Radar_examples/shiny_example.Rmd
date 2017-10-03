@@ -1,0 +1,236 @@
+---
+title: "Untitled"
+runtime: shiny
+output: html_document
+---
+
+```{r, include=FALSE}
+library(plotly)
+library(dplyr)
+library(ggplot2)
+
+#####################################################################################################
+############################ 0. Set up example data ####################################################
+#####################################################################################################
+
+## a) You can either use data, which is rescaled between 0 and 1 for the radar OR
+## b) You can calculate the quantile moment of each data point
+## -> The latter method avoids overplotting if your data is clustered and provides meaningful grid-lines, 
+##    but since it distorts the data outliers won't be spotted easily. The first method
+##    doesn't distort the distribution, but with it the 50 % quantile will be on a different distance
+##    from the center of the radar. Thus a) only makes sense in special situations. 
+## -> If you are interested in outliers and the distribution: Make a boxplot! Not a radar ;)
+
+### 0.1a Rescale the mtcars dataset and select the last four cars and the first nine variables 
+##       Warning: This will make any quantile lines 'meaningless'
+mtcars %>%
+  tibble::rownames_to_column(var = 'group' ) %>%
+  mutate_at(.vars=vars(mpg:carb),.funs=scales::rescale)  %>%
+  tail(4) %>% select(1:10) -> mtcars_radar
+
+### 0.1b Create quantile data from the example dataset to create the grid (recommended)
+tmp<-lapply(1:ncol(mtcars),function(j) rank(mtcars[,j],na.last="keep")/sum(!is.na(mtcars[,j])))
+qmtcars<-do.call(data.frame,tmp)
+colnames(qmtcars)=colnames(mtcars)
+rownames(qmtcars)=rownames(mtcars)
+## do the same as with the rescaled data
+qmtcars %>% tibble::rownames_to_column(var = 'group' ) %>%
+  tail(4) %>% select(1:10) -> mtcars_radar
+
+### 0.2 Create hover data for plotly - leave this out when you chose a)
+mtcars %>% #tibble::rownames_to_column(var = 'group' ) %>% 
+  tail(4) %>% select(1:9) -> mtcars_hover
+mtcars_hover<-cbind(mtcars_hover,'mpg'=mtcars_hover[,1])
+
+### 0.3 Create quantile data for the hoverinfo of the gridlines - leave this out when you chose a)
+qdata<-sapply(colnames(mtcars_radar)[-1],function(j) quantile(mtcars[,j],probs = seq(0,1,0.25)))
+qdata=cbind(qdata,mpg=qdata[,'mpg'])
+
+### 0.4 Set the plot parameters - mostly similar to ggradar
+plot.data <- mtcars_radar
+### parameters
+    axis.labels=colnames(plot.data)[-1]                             
+    grid.min=0  
+    grid.mid=0.5
+    grid.max=1  
+    centre.y=grid.min - ((1/9)*(grid.max-grid.min))
+    plot.extent.x.sf=1.2
+    plot.extent.y.sf=1.2
+    axis.label.offset=1.15
+    axis.line.colour="grey"
+    background.circle.transparency=0.2
+    r<-seq(0,1,0.25) ## Radius of the gridlines
+
+                                 
+#####################################################################################################
+############################ 1. Helper functions ####################################################
+#####################################################################################################
+
+CalculateGroupPath4 <- function(df) {
+  angles = seq(from=0, to=2*pi, by=(2*pi)/(ncol(df)-1)) # find increment
+  xx<-c(rbind(t(plot.data.offset[,-1])*sin(angles[-ncol(df)]),t(plot.data.offset[,2])*sin(angles[1])))
+  yy<-c(rbind(t(plot.data.offset[,-1])*cos(angles[-ncol(df)]),t(plot.data.offset[,2])*cos(angles[1])))
+  graphData<-data.frame(group=rep(df[,1],each=ncol(df)),x=(xx),y=(yy))
+  return(graphData)
+}
+
+CalculateAxisPath2 <- function(var.names,min,max) {
+n<-length(var.names)
+#Cacluate required number of angles (in radians)
+angles <- seq(from=0, to=2*pi, by=(2*pi)/n)
+#calculate vectors of min and max x+y coords
+min.x <- min*sin(angles)
+min.y <- min*cos(angles)
+max.x <- max*sin(angles)
+max.y <- max*cos(angles)
+tmp<-lapply(1:n,function(i) matrix(c(i,i,min.x[i],max.x[i],min.y[i],max.y[i]),2,3))
+res<-as.data.frame(do.call(rbind,tmp))
+colnames(res) <- c("axis.no","x","y")
+return(res)
+}
+
+funcCircleCoords <- function(center = centre.y, r = 1, npoints = ncol(plot.data)){
+  #Adapted from Joran's response to http://stackoverflow.com/questions/6862742/draw-a-circle-with-ggplot2
+  tt <- seq(0,2*pi,length.out = npoints)
+  yy <- center + r * cos(tt)
+  xx <- center + r * sin(tt)
+  return(data.frame(x = xx, y = yy))
+}
+
+#####################################################################################################
+############################ 2. Prepare Plotting  ####################################################
+#####################################################################################################
+
+### 2.1. Create vector with all KPI/variable names; Set up the data for plotting 
+var.names <- colnames(plot.data)[-1]  # Short version of variable names 
+plot.data.offset <- plot.data
+plot.data.offset[,2:ncol(plot.data)]<- plot.data[,2:ncol(plot.data)]+abs(centre.y)
+
+### 2.2. Calculate the x and y coordinates for our data
+xy_lines <- CalculateGroupPath4(plot.data.offset)
+xy_lines$annot<-  c(t(mtcars_hover))
+xy_lines$text <-  paste(paste(rep(colnames(mtcars_hover),nrow(mtcars_radar)),xy_lines$annot,sep=": "),'<br />')
+
+### 2.3. Create a list containing all grid-objects:                 # Note for shiny: All elements of `grid` are static
+## 2.3.1 Calculate the data frame for the axis-lines
+grid <- NULL
+grid$axis_path  <- CalculateAxisPath2(var.names,grid.min+abs(centre.y),grid.max+abs(centre.y))
+n.vars <- length(var.names)
+
+## 2.3.2 Calculate the coordinates for the axis labels
+grid$axis_label <-funcCircleCoords(0,(grid.max+abs(centre.y))*axis.label.offset,ncol(plot.data))[-ncol(plot.data),]
+grid$axis_label$text=axis.labels
+
+## 2.3.3a For polygon-radar (spider-chart): Calculate the grid-lines
+grid$lines<- lapply(1:length(r),function(i) funcCircleCoords(0,r[i]+abs(centre.y),ncol(plot.data)))
+names(grid$lines)<-paste("q",r*100,sep='')
+
+## 2.3.3b For circular radar: Calculate the grid-lines
+grid$lines_circle<- lapply(1:length(r),function(i) funcCircleCoords(0,r[i]+abs(centre.y),ncol(plot.data)*(2^7)))
+names(grid$lines_circle)<-paste(r*100,'% Quantile',sep='')
+
+## 2.3.4 Add the real values to the gridlines
+rownames(qdata)=names(grid$lines)
+grid$lines<-lapply(1:length(grid$lines),function(j) cbind(grid$lines[[j]],values=round(qdata[names(grid$lines[j]),],2)))
+names(grid$lines)<-rownames(qdata)
+
+## 2.3.5 Bind all the grid-lines in one data.frame
+grid$all_lines<-do.call(rbind,grid$lines)
+n<-nrow(grid$all_lines)/length(grid$lines)        # n 
+grid$all_lines$q<-rep(names(grid$lines), each=n)  # The quantiles of each grid
+
+## 2.3.5a For plotly: Create a data without 0 and 100 % Quantile to plot all grid-lines at once
+myrows<-which(grid$all_lines$q%in%names(grid$lines)[-c(1,length(grid$lines))]) # Select all quantiles except q0 & q100
+grid$inner_lines<-grid$all_lines[myrows,] # create df of the inner grid values
+
+## 2.3.5b For a circular grid: Bind all the grid-lines in one df and add the real values
+grid$all_lines_c<-do.call(rbind,grid$lines_circle)
+n<-nrow(grid$all_lines_c)/length(grid$lines_circle)
+grid$all_lines_c$q<-rep(names(grid$lines_circle),each=n) # The quantiles of each grid
+
+### 2.4 Create a data.frame to annotate the maximum points of the radar-chart
+data_max<-grid$axis_path[seq(2,nrow(grid$axis_path),2),]
+data_max$text<-round(qdata['q100',-ncol(qdata)],2)
+```
+
+# Inputs and Outputs
+
+This is a minimal example of an interactive radar plot. Other possible inputs could e.g. be which car to show. This only serves as a teaching example of how to use the functions delivered in PrepPlot. Any combination is possible. 
+
+```{r eruptions, echo=FALSE, fig.height=11, out.height='600px'}
+fluidPage(sidebarLayout(
+    sidebarPanel(checkboxGroupInput("Addtext", 'Annotations',
+                                    c(mtcars_radar$group,'Max. Values')),width = 3),
+    mainPanel(plotlyOutput('plot1'),width=9)
+  )
+  )
+  
+output$plot1 = renderPlotly({
+      
+      values_size=9
+      opacity_val=0.7
+      opacity_val2=0.25
+      
+      ay <- list(title = "",zeroline = FALSE,showline = FALSE,showticklabels = FALSE, showgrid = FALSE)
+      ax <- list(title = "",zeroline = FALSE,showline = FALSE,showticklabels = FALSE, showgrid = FALSE)
+      qline.color='rgb(204,204,204)'
+          
+      # geom_path(data=axis$path,aes(x=x,y=y,group=axis.no),colour=axis.line.colour,alpha=0.4)
+      plot_ly(width=600,height=600) %>% 
+        add_trace(data=xy_lines,x=~x,y=~y,
+                  type='scatter',mode='lines',split= ~group,
+                  hoverinfo = 'text', text = ~text,opacity=opacity_val) %>% 
+        add_trace(data=grid$inner_lines,x=~x,y=~y,type='scatter',mode='lines',split=~q,
+                        hoverinfo = 'text', text = ~values,
+                        line = list(color = qline.color,dash='dash'),opacity=opacity_val2) %>% 
+        add_trace(data=grid$lines$q100,x=~x,y=~y,type='scatter',mode='lines',
+                        name='100% Quantil',hoverinfo = 'text', text = ~values,
+                        line = list(color = qline.color)) %>% 
+        add_trace(data=grid$lines$q0,x=~x,y=~y,type='scatter',mode='lines',name='100% Quantil',
+                  hoverinfo = 'skip',line = list(color = axis.line.colour),
+                  showlegend=FALSE,opacity=opacity_val2) %>% 
+        add_trace(data=grid$axis_path,x=~x,y=~y,split=~axis.no,type='scatter',mode='lines',
+                  line=list(color=axis.line.colour),opacity=0.4,hoverinfo='skip',showlegend=F) %>%
+        add_trace(x=grid$axis_label$x,y=grid$axis_label$y,type='scatter',mode='text',
+                  text=grid$axis_label$text,textposition='middle',
+                  textfont = list(color = '#000000', size = 15),hoverinfo='skip',showlegend=FALSE) %>%
+          layout(yaxis = ay,xaxis=ax,legend = list(x = 0, y = 0,font = list(family = "sans-serif", 
+                                                                            size = 14, color = "#000"),
+                               orientation = 'h'),showlegend=TRUE) -> p
+      
+      if(!is.null(input$Addtext)){
+        if(levels(xy_lines$group)[1] %in% input$Addtext ){
+          p<-p %>% add_trace(data=xy_lines[xy_lines[,1]==levels(xy_lines$group)[1],],x=~x,y=~y,
+                             type='scatter',mode='text',text=~annot,
+                              textposition='bottom right',textfont = list(color = '#000000', size = values_size),
+                              hoverinfo='skip',showlegend=FALSE)    
+        }
+        if(levels(xy_lines$group)[2] %in% input$Addtext ){
+          p<-p %>% add_trace(data=xy_lines[xy_lines[,1]==levels(xy_lines$group)[2],],x=~x,y=~y,
+                             type='scatter',mode='text',text=~annot,
+                              textposition='bottom right',textfont = list(color = '#000000', size = values_size),
+                              hoverinfo='skip',showlegend=FALSE)    
+        }
+        if(levels(xy_lines$group)[3] %in% input$Addtext ){
+          p<-p %>% add_trace(data=xy_lines[xy_lines[,1]==levels(xy_lines$group)[3],],x=~x,y=~y,
+                             type='scatter',mode='text',text=~annot,
+                              textposition='bottom right',textfont = list(color = '#000000', size = values_size),
+                              hoverinfo='skip',showlegend=FALSE)    
+        }
+        if(levels(xy_lines$group)[4] %in% input$Addtext ){
+          p<-p %>% add_trace(data=xy_lines[xy_lines[,1]==levels(xy_lines$group)[4],],x=~x,y=~y,
+                             type='scatter',mode='text',text=~annot,
+                              textposition='bottom right',textfont = list(color = '#000000', size = values_size),
+                              hoverinfo='skip',showlegend=FALSE)    
+        }
+        if('Max. Values' %in% input$Addtext ){
+          p<-p %>% add_trace(data=data_max,x=~x,y=~y,
+                             type='scatter',mode='text',text=~text,
+                              textposition='bottom right',textfont = list(color = '#000000', size = values_size),
+                              hoverinfo='skip',showlegend=FALSE)    
+        }
+      }
+      p
+    })
+```
+
