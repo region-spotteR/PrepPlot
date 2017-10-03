@@ -6,14 +6,11 @@ I mainly created this package for documenting my work on radar-/spider-plots. Ho
 Concerning radar-plots there are currently three examples (cf. the corresponding example-folder):
 1.  You can choose between a polygon grid:
 <p align="center">
-  <img src="https://user-images.githubusercontent.com/32107403/31129307-7468fad8-a854-11e7-8c43-2a8b349c657e.jpeg" width="350"/>
-  <img src="https://user-images.githubusercontent.com/32107403/31129307-7468fad8-a854-11e7-8c43-2a8b349c657e.jpeg" width="350"/>
+  <img src="https://user-images.githubusercontent.com/32107403/31129307-7468fad8-a854-11e7-8c43-2a8b349c657e.jpeg" width="400"/>
+  <img src="https://user-images.githubusercontent.com/32107403/31129046-c5307fe6-a853-11e7-8054-c9057a63100b.png" width="400"/>
 </p>
 
-![polygon grid](https://user-images.githubusercontent.com/32107403/31129307-7468fad8-a854-11e7-8c43-2a8b349c657e.jpeg)
-
-2.  Or a circular grid: 
-![circular one](https://user-images.githubusercontent.com/32107403/31129046-c5307fe6-a853-11e7-8054-c9057a63100b.png) 
-
 3.  There is even a working example in Shiny and Plotly:
-![A plotly example:](https://user-images.githubusercontent.com/32107403/31129095-e47ea7e2-a853-11e7-99b3-8a648981a082.png)
+<p align="center">
+  <img src="https://user-images.githubusercontent.com/32107403/31129095-e47ea7e2-a853-11e7-99b3-8a648981a082.png" width="600"/>
+</p>
