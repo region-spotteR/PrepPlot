@@ -5,6 +5,11 @@ I mainly created this package for documenting my work on radar-/spider-plots. Ho
 
 Concerning radar-plots there are currently three examples (cf. the corresponding example-folder):
 1.  You can choose between a polygon grid:
+<p align="center">
+  <img src="https://user-images.githubusercontent.com/32107403/31129307-7468fad8-a854-11e7-8c43-2a8b349c657e.jpeg" width="350"/>
+  <img src="https://user-images.githubusercontent.com/32107403/31129307-7468fad8-a854-11e7-8c43-2a8b349c657e.jpeg" width="350"/>
+</p>
+
 ![polygon grid](https://user-images.githubusercontent.com/32107403/31129307-7468fad8-a854-11e7-8c43-2a8b349c657e.jpeg)
 
 2.  Or a circular grid: 
