@@ -16,4 +16,4 @@ Concerning radar-plots there are currently three examples (cf. the corresponding
   <img src="https://user-images.githubusercontent.com/32107403/31129095-e47ea7e2-a853-11e7-99b3-8a648981a082.png" width="600"/>
 </p>
 
-[1] https://hilaryparker.com/2014/04/29/writing-an-r-package-from-scratch/
+  [1]: https://hilaryparker.com/2014/04/29/writing-an-r-package-from-scratch/
