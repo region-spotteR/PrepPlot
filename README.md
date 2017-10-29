@@ -2,7 +2,7 @@
 
 I mainly created this package for documenting my work on radar-/spider-plots. However I will add more functions which I used to create certain data-objects for plotting. There is also a folder with examples. 
 
-Installation: Since I haven't yet figured out `devtools` github install, use Ms Parker's description on [how to install a custom R-package][1]
+Installation: Since I haven't yet figured out `devtools` github install, use either Ms Parker's description on [how to install a custom R-package][1] or paste the functions in your .r or .Rmd-file if you do not need documentation. 
 
 Concerning radar-plots there are currently three examples (cf. the corresponding example-folder):
 1.  You can choose between a polygon grid or a circular grid:
