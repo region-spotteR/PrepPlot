@@ -1,6 +1,6 @@
 This folder contains different radar implementations
 
-Instructions: 
+<b>Instructions:</b> 
   1.  First run the first chunk in shiny_example.Rmd
   2.  Then either 
          -  use the plotly implementation in the same file or 
